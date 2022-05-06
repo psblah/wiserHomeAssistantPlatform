@@ -8,7 +8,7 @@ Angelosantagata@gmail.com
 from datetime import datetime
 import logging
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass, SensorEntity
-from homeassistant.const import ATTR_BATTERY_LEVEL, TEMP_CELSIUS, PERCENTAGE, POWER_WATT, ENERGY_KILO_WATT_HOUR
+from homeassistant.const import ATTR_BATTERY_LEVEL, TEMP_CELSIUS, PERCENTAGE, POWER_WATT, ENERGY_KILO_WATT_HOUR, TEMP_CELSIUS, PRESSURE_BAR
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import EntityCategory
 import voluptuous as vol
@@ -58,6 +58,14 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     wiser_sensors.append(
         WiserSystemOperationModeSensor(data, sensor_type = "Heating Operation Mode")
     )
+
+    # Add OpenTherm statistics
+    if data.wiserhub.opentherm:
+        _LOGGER.debug("Setting up OpenTherm sensors")
+        for opentherm_sensor in data.wiserhub.opentherm.all:
+                wiser_sensors.append(
+                    WiserSystemCircuitState(data, opentherm_sensor.id, sensor_type = "OpenTherm")
+                )
 
     # Add heating circuit sensor
     if data.wiserhub.heating_channels:
@@ -434,7 +442,92 @@ class WiserSystemCircuitState(WiserSensor):
             attrs["is_override"] = hw.is_override
         return attrs
 
+class WiserSystemOpenThermPressure(WiserSensor):
+    """Sensor to display the pressure returned by OpenTherm."""
 
+    def __init__(self, data, device_id=0, sensor_type=""):
+        """Initialise the cloud sensor."""
+        super().__init__(data, device_id, sensor_type)
+
+    async def async_update(self):
+        """Fetch new state data for the sensor."""
+        await super().async_update()
+        self._state = self._data.wiserhub.system.opentherm_ch_pressure_bar
+    
+    @property
+    def icon(self):
+        """Return icon."""
+        if self._state == "Connected":
+            return "mdi:cloud-check"
+        return "mdi:cloud-alert"
+
+    @property
+    def native_value(self) -> float:
+        """Return the state of the entity."""
+        return self._state
+
+    @property
+    def native_unit_of_measurement(self) -> str:
+        """Return the unit this state is expressed in."""
+        return PRESSURE_BAR
+
+class WiserSystemOpenThermCH1FlowTemp(WiserSensor):
+    """Sensor to display the pressure returned by OpenTherm."""
+
+    def __init__(self, data, device_id=0, sensor_type=""):
+        """Initialise the cloud sensor."""
+        super().__init__(data, device_id, sensor_type)
+
+    async def async_update(self):
+        """Fetch new state data for the sensor."""
+        await super().async_update()
+        self._state = self._data.wiserhub.system.opentherm_ch_flow_temperature
+    
+    @property
+    def icon(self):
+        # CH1 Flow Temp
+        if self._state == "Off":
+            return "mdi:fire-off"
+        return "mdi:fire"
+    @property
+    def native_value(self) -> float:
+        """Return the state of the entity."""
+        return self._state
+
+    @property
+    def native_unit_of_measurement(self) -> str:
+        """Return the unit this state is expressed in."""
+        return TEMP_CELSIUS
+
+class WiserSystemOpenThermCHReturnTemp(WiserSensor):
+    """Sensor to display the pressure returned by OpenTherm."""
+
+    def __init__(self, data, device_id=0, sensor_type=""):
+        """Initialise the cloud sensor."""
+        super().__init__(data, device_id, sensor_type)
+
+    async def async_update(self):
+        """Fetch new state data for the sensor."""
+        await super().async_update()
+        self._state = self._data.wiserhub.system.opentherm_ch_return_temperature
+    
+    @property
+    def icon(self):
+        # CH1 Flow Temp
+        if self._state == "Off":
+            return "mdi:fire-off"
+        return "mdi:fire"
+    @property
+    def native_value(self) -> float:
+        """Return the state of the entity."""
+        return self._state
+
+    @property
+    def native_unit_of_measurement(self) -> str:
+        """Return the unit this state is expressed in."""
+        return TEMP_CELSIUS
+
+   
 class WiserSystemCloudSensor(WiserSensor):
     """Sensor to display the status of the Wiser Cloud."""
 
